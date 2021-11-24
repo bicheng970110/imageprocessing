@@ -1,0 +1,130 @@
+%视频处理
+video = VideoReader('001.AVI');
+numframe = video.NumberOfFrames;
+for i = 1:numframe
+    frame = read(video,i);
+    level = graythresh(frame);
+    BW = im2bw(frame,level);
+    se = strel('disk',1);
+    openbw = imopen(BW,se);
+    BW1 = bwareaopen(openbw,9999);%改良 1000-5000 结果噪音变小
+    %BW2 = medfilt2(BW1);
+    BW3 = imfill(BW1,'holes');
+    BW3 = 1 - BW3;
+    %BW1 = medfilt2(BW);
+    %BW1 = 1 - BW1;
+    %BW2 = imfill(BW1,'holes');
+    imshow(BW3);
+end
+
+%降噪
+[m,n] = size(BW);
+for i = 2:m-1
+    for j = 2:n-1
+        if(BW(i,j)~=BW(i+1,j) && BW(i,j)~=BW(i-1,j))
+            BW(i,j) = 1;
+        elseif(BW(i,j)~=BW(i,j+1) && BW(i,j)~=BW(i,j-1))
+            BW(i,j) = 1;
+        elseif(BW(i,j)~=BW(i+1,j+1) && BW(i,j)~=BW(i-1,j-1))
+            BW(i,j) = 1;
+        elseif(BW(i,j)~=BW(i-1,j+1) && BW(i,j)~=BW(i+1,j-1))
+            BW(i,j) = 1;
+        end
+    end
+end    
+
+
+%%改良1
+clc;clear all;close all
+clear;close all
+%读取图像
+bc = imread('003.jpg');%bloodcell = bc
+figure,subplot(2,2,1),imshow(bc),title('原图')
+
+%二值化阈值
+level = graythresh(bc);
+BW = im2bw(bc,level);
+subplot(2,2,2),imshow(BW),title('二值图像')
+
+%运用开操作消去噪点
+se = strel('disk',1);
+openbw = imopen(BW,se);
+BW1 = bwareaopen(openbw,100);%改良 1000-5000 结果噪音变小
+BW2 = medfilt2(BW1);
+BW3 = imfill(BW2,'holes');
+subplot(2,2,3),imshow(BW3),title('开运算后的效果图')
+
+%获得连通区域，并显示
+L = bwlabel(BW3,8);
+[L,num] = bwlabel(BW3,8);
+RGB = label2rgb(L);
+subplot(2,2,4),imshow(RGB),title('用RGB标记不同区域')
+
+%获取区域的'basic'属性，'area''centroid''boundingbox'
+stats = regionprops(BW3, 'basic');
+stats = regionprops(BW3, 'BoundingBox','Area','Centroid','PixelList');
+centroids = cat(1,stats.Centroid);
+
+noiseArea = 4000;
+figure,imshow(BW3),title('2')
+hold on
+for i = 1:size(stats)
+    imshow(BW3)
+    rectangle('Position',[stats(i).BoundingBox],'LineStyle','--','EdgeColor','r'),
+    plot(centroids(i,1),centroids(i,2),'b*');
+    area = stats(i).Area;
+    if area<noiseArea
+        pointList = stats(i).PixelList;
+        rIndex = pointList(:,2);
+        cIndex = pointList(:,1);
+        pointList = stats(i).PixelList;
+        openbw(rIndex,cIndex) = 1;
+    end
+    pause(1);
+end
+hold off
+
+
+%%改良2
+%视频处理
+video = VideoReader('001.AVI');
+numframe = video.NumFrames;
+for i = 1:numframe
+    BW = read(video,i);
+    %level = graythresh(frame);
+    %BW = im2bw(frame,level);
+    BW = imerode(BW,strel('disk',5));%腐蚀图像
+    %BW = 1 - BW;
+    %BW = imfilter(BW,fspecial('average',10));%使图模糊
+    %BW = imdilate(BW,strel('disk',5));%膨胀图像
+    BW = imcomplement(BW);
+    %se = strel('disk',1);
+    %openbw = imopen(BW,se);
+    %BW1 = bwareaopen(openbw,3000);%改良 1000-5000 结果噪音变小
+    %BW2 = medfilt2(BW1);
+    %BW3 = imfill(BW2);
+    imshow(BW)
+    %BW4 = edge(BW3,'canny');
+    %imshow(BW4)
+end
+
+
+%%改良3
+%视频处理
+video = VideoReader('001.AVI');
+numframe = video.NumberOfFrames;
+for i = 1:numframe
+    frame = read(video,i);
+    level = graythresh(frame);
+    BW = im2bw(frame,level);
+    BW = imerode(BW,strel('disk',1));%腐蚀图像
+    BW = 1 - BW;
+    BW = imfilter(BW,fspecial('average',1));%使图模糊
+    BW = imdilate(BW,strel('disk',25));%膨胀图像
+    BW = imcomplement(BW);
+    BW1 = medfilt2(BW);
+    BW2 = bwareaopen(BW1,5000);%改良 1000-5000 结果噪音变小
+    imshow(BW2);
+    BW3 = edge(BW2,'canny');
+    imshow(BW3)
+end
